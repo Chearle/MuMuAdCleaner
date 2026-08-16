@@ -29,11 +29,8 @@ Windows 端游戏启动开屏广告不在本工具范围内。
 
 ## 下载
 
-直接下载安装包：
-
-- [dist/MuMuAdCleaner.apk](https://github.com/Chearle/MuMuAdCleaner/raw/main/dist/MuMuAdCleaner.apk)
-
-或 Clone 本仓库后使用 `dist/MuMuAdCleaner.apk`。
+- 发布页：https://github.com/Chearle/MuMuAdCleaner/releases/latest
+- 安装包：https://github.com/Chearle/MuMuAdCleaner/releases/latest/download/MuMuAdCleaner.apk
 
 ## 使用方法
 
