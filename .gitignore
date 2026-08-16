@@ -1,5 +1,13 @@
+# Build
 build/
-debug.keystore
+*.class
 *.apk.idsig
+
+# Signing
+debug.keystore
+
+# Local
+local.properties
 .DS_Store
 Thumbs.db
+*.log

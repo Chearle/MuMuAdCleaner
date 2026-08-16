@@ -1,4 +1,7 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: MIT
+# Restore MuMu desktop ads. Must run as root.
+
 echo "==== restore $(date) ===="
 
 enable_one() {

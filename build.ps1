@@ -1,15 +1,56 @@
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Sdk = 'C:\Users\A\AppData\Local\Android\Sdk'
-$BuildTools = Join-Path $Sdk 'build-tools\36.0.0'
+
+function Resolve-AndroidSdk {
+    foreach ($candidate in @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, (Join-Path $env:LOCALAPPDATA 'Android\Sdk'))) {
+        if ($candidate -and (Test-Path $candidate)) {
+            return $candidate
+        }
+    }
+    throw 'Android SDK not found. Set ANDROID_HOME or ANDROID_SDK_ROOT.'
+}
+
+function Resolve-JavaHome {
+    if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME 'bin\javac.exe'))) {
+        return $env:JAVA_HOME
+    }
+    $fallback = 'C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot'
+    if (Test-Path (Join-Path $fallback 'bin\javac.exe')) {
+        return $fallback
+    }
+    throw 'JDK not found. Set JAVA_HOME to JDK 17.'
+}
+
+function Resolve-BuildTools([string]$Sdk) {
+    $preferred = @(
+        (Join-Path $Sdk 'build-tools\36.0.0'),
+        (Join-Path $Sdk 'build-tools\35.0.1'),
+        (Join-Path $Sdk 'build-tools\34.0.0')
+    )
+    foreach ($dir in $preferred) {
+        if (Test-Path (Join-Path $dir 'aapt2.exe')) {
+            return $dir
+        }
+    }
+    $found = Get-ChildItem (Join-Path $Sdk 'build-tools') -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        Where-Object { Test-Path (Join-Path $_.FullName 'aapt2.exe') } |
+        Select-Object -First 1
+    if ($found) {
+        return $found.FullName
+    }
+    throw "No Android build-tools with aapt2.exe under $Sdk"
+}
+
+$Sdk = Resolve-AndroidSdk
+$BuildTools = Resolve-BuildTools $Sdk
 $AndroidJar = Join-Path $Sdk 'platforms\android-35\android.jar'
 $Aapt2 = Join-Path $BuildTools 'aapt2.exe'
 $D8 = Join-Path $BuildTools 'd8.bat'
 $Zipalign = Join-Path $BuildTools 'zipalign.exe'
 $Apksigner = Join-Path $BuildTools 'apksigner.bat'
-$JavaHome = $env:JAVA_HOME
-if (-not $JavaHome) { $JavaHome = 'C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot' }
+$JavaHome = Resolve-JavaHome
 $Javac = Join-Path $JavaHome 'bin\javac.exe'
 $Keytool = Join-Path $JavaHome 'bin\keytool.exe'
 
@@ -24,8 +65,7 @@ $ResFlat = Join-Path $Work 'res.zip'
 $Unsigned = Join-Path $Work 'unsigned.apk'
 $Aligned = Join-Path $Work 'aligned.apk'
 $OutDir = Join-Path $Root 'dist'
-$SignedAscii = Join-Path $OutDir 'MuMuAdCleaner.apk'
-$OutApk = $SignedAscii
+$OutApk = Join-Path $OutDir 'MuMuAdCleaner.apk'
 $Keystore = Join-Path $Root 'debug.keystore'
 
 if (Test-Path $Work) { Remove-Item $Work -Recurse -Force }
@@ -94,13 +134,5 @@ Write-Host '== verify =='
 cmd /c "`"$Apksigner`" verify --verbose `"$OutApk`""
 if ($LASTEXITCODE -ne 0) { throw 'apk verify failed' }
 
-$share = 'C:\Users\A\Documents\MuMu共享文件夹\Download'
-$desktop = [Environment]::GetFolderPath('Desktop')
-New-Item -ItemType Directory -Force -Path $share | Out-Null
-Copy-Item $OutApk (Join-Path $share 'MuMuAdCleaner.apk') -Force
-Copy-Item $OutApk (Join-Path $desktop 'MuMuAdCleaner.apk') -Force
-
 Write-Host ''
 Write-Host "APK: $OutApk"
-Write-Host "Desktop: $(Join-Path $desktop 'MuMu去广告.apk')"
-Write-Host "MuMu share: $(Join-Path $share 'MuMu去广告.apk')"

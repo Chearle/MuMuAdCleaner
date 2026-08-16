@@ -2,8 +2,10 @@
 <resources>
     <string name="app_name">MuMu去广告</string>
     <string name="title">MuMu 桌面去广告</string>
-    <string name="subtitle">去掉顶部搜索栏广告和「每日新发现」。需要 KernelSU 授权 Root。每台模拟器安装一次即可，重启后仍然有效。</string>
+    <string name="subtitle">去掉顶部搜索栏、「每日新发现」和底栏小工具推广。需要 KernelSU 授权 Root。每台模拟器安装一次即可，重启后仍然有效。</string>
     <string name="btn_apply">去除广告</string>
     <string name="btn_restore">恢复广告</string>
     <string name="checking_root">正在检测 Root…</string>
+    <string name="log_title">运行日志</string>
+    <string name="log_waiting">等待操作</string>
 </resources>
