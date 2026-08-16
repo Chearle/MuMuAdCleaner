@@ -1,5 +1,6 @@
 # Build
 build/
+dist/
 *.class
 *.apk.idsig
 

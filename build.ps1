@@ -23,16 +23,6 @@ function Resolve-JavaHome {
 }
 
 function Resolve-BuildTools([string]$Sdk) {
-    $preferred = @(
-        (Join-Path $Sdk 'build-tools\36.0.0'),
-        (Join-Path $Sdk 'build-tools\35.0.1'),
-        (Join-Path $Sdk 'build-tools\34.0.0')
-    )
-    foreach ($dir in $preferred) {
-        if (Test-Path (Join-Path $dir 'aapt2.exe')) {
-            return $dir
-        }
-    }
     $found = Get-ChildItem (Join-Path $Sdk 'build-tools') -Directory -ErrorAction SilentlyContinue |
         Sort-Object Name -Descending |
         Where-Object { Test-Path (Join-Path $_.FullName 'aapt2.exe') } |

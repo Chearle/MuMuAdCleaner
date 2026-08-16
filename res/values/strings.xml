@@ -6,6 +6,14 @@
     <string name="btn_apply">去除广告</string>
     <string name="btn_restore">恢复广告</string>
     <string name="checking_root">正在检测 Root…</string>
+    <string name="root_ok">Root 可用，可以去除广告</string>
+    <string name="root_fail">没有 Root。请打开 KernelSU，授权本应用后再点「去除广告」</string>
+    <string name="root_ok_log">Root 检测成功</string>
+    <string name="root_fail_log">Root 检测失败。</string>
+    <string name="applying">正在去除广告…</string>
+    <string name="restoring">正在恢复广告…</string>
+    <string name="apply_ok">完成。请看桌面，搜索栏和「每日新发现」应已消失</string>
+    <string name="apply_fail">执行失败，请查看下方日志</string>
     <string name="log_title">运行日志</string>
     <string name="log_waiting">等待操作</string>
 </resources>

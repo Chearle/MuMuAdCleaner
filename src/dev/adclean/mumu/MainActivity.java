@@ -1,11 +1,9 @@
 package dev.adclean.mumu;
 
 import android.app.Activity;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -19,12 +17,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
+    private static final String[] SU = {"su", "-c", "sh"};
+    private static final String[] ASSETS = {
+            "common.sh", "apply.sh", "persist.sh", "restore.sh"
+    };
+    private static final int LOG_MAX = 4000;
+
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Handler ui = new Handler(Looper.getMainLooper());
+
     private TextView rootStatus;
     private TextView logView;
     private Button btnApply;
     private Button btnRestore;
+    private int colorOk;
+    private int colorWarn;
+    private int colorFail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,17 +42,20 @@ public class MainActivity extends Activity {
         logView = findViewById(R.id.logView);
         btnApply = findViewById(R.id.btnApply);
         btnRestore = findViewById(R.id.btnRestore);
+        colorOk = getColor(R.color.ok);
+        colorWarn = getColor(R.color.warn);
+        colorFail = getColor(R.color.danger_text);
 
-        btnApply.setOnClickListener(new View.OnClickListener() {
+        btnApply.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                runScript("apply.sh", "正在去除广告…");
+            public void onClick(android.view.View v) {
+                runScript("apply.sh", R.string.applying);
             }
         });
-        btnRestore.setOnClickListener(new View.OnClickListener() {
+        btnRestore.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                runScript("restore.sh", "正在恢复广告…");
+            public void onClick(android.view.View v) {
+                runScript("restore.sh", R.string.restoring);
             }
         });
         checkRoot();
@@ -61,13 +72,11 @@ public class MainActivity extends Activity {
                     public void run() {
                         setBusy(false);
                         if (r.ok && r.output.contains("uid=0")) {
-                            rootStatus.setText("Root 可用，可以去除广告");
-                            rootStatus.setTextColor(Color.parseColor("#FF6DFFB3"));
-                            appendLog("Root 检测成功\n" + r.output.trim());
+                            setStatus(getString(R.string.root_ok), colorOk);
+                            appendLog(getString(R.string.root_ok_log) + "\n" + r.output.trim());
                         } else {
-                            rootStatus.setText("没有 Root。请打开 KernelSU，授权本应用后再点「去除广告」");
-                            rootStatus.setTextColor(Color.parseColor("#FFFFD37A"));
-                            appendLog("Root 检测失败。\n" + r.output);
+                            setStatus(getString(R.string.root_fail), colorWarn);
+                            appendLog(getString(R.string.root_fail_log) + "\n" + r.output);
                         }
                     }
                 });
@@ -75,21 +84,16 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void runScript(final String assetName, final String pending) {
+    private void runScript(final String name, final int pendingId) {
         setBusy(true);
-        appendLog(pending);
+        appendLog(getString(pendingId));
         io.execute(new Runnable() {
             @Override
             public void run() {
                 Result r;
                 try {
-                    File script = copyAssetUnix(assetName);
-                    String remote = "/data/local/tmp/mumu-adclean-" + assetName;
-                    String cmd = "cat '" + script.getAbsolutePath() + "' | tr -d '\\r' > " + remote
-                            + " && chmod 755 " + remote
-                            + " && sh " + remote
-                            + " ; echo EXIT:$?";
-                    r = su(cmd);
+                    stageAssets();
+                    r = su("chmod 755 /data/local/tmp/mumu-adclean-*.sh && sh /data/local/tmp/mumu-adclean-" + name);
                     if (r.output.contains("DONE")) {
                         r = Result.ok(r.output);
                     }
@@ -103,11 +107,9 @@ public class MainActivity extends Activity {
                         setBusy(false);
                         appendLog(out.output);
                         if (out.ok && out.output.contains("DONE")) {
-                            rootStatus.setText("完成。请看桌面，搜索栏和「每日新发现」应已消失");
-                            rootStatus.setTextColor(Color.parseColor("#FF6DFFB3"));
+                            setStatus(getString(R.string.apply_ok), colorOk);
                         } else {
-                            rootStatus.setText("执行失败，请把下方日志发我");
-                            rootStatus.setTextColor(Color.parseColor("#FFFFB4C4"));
+                            setStatus(getString(R.string.apply_fail), colorFail);
                         }
                     }
                 });
@@ -115,54 +117,52 @@ public class MainActivity extends Activity {
         });
     }
 
-    private File copyAssetUnix(String name) throws Exception {
+    private void stageAssets() throws Exception {
+        File dir = getCacheDir();
+        StringBuilder cmd = new StringBuilder();
+        for (int i = 0; i < ASSETS.length; i++) {
+            String name = ASSETS[i];
+            File out = new File(dir, name);
+            writeUnix(out, loadAsset(name));
+            cmd.append("cat '").append(out.getAbsolutePath()).append("'")
+                    .append(" > /data/local/tmp/mumu-adclean-").append(name)
+                    .append(" && ");
+        }
+        Result r = su(cmd.append("true").toString());
+        if (!r.ok) {
+            throw new IllegalStateException(r.output);
+        }
+    }
+
+    private String loadAsset(String name) throws Exception {
         InputStream in = getAssets().open(name);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] buf = new byte[4096];
             int n;
             while ((n = in.read(buf)) > 0) {
-                for (int i = 0; i < n; i++) {
-                    if (buf[i] != '\r') {
-                        bos.write(buf[i]);
-                    }
-                }
+                bos.write(buf, 0, n);
             }
+            return new String(bos.toByteArray(), StandardCharsets.UTF_8).replace("\r", "");
         } finally {
             in.close();
         }
-        File out = new File(getCacheDir(), name);
+    }
+
+    private static void writeUnix(File out, String text) throws Exception {
         FileOutputStream fos = new FileOutputStream(out);
         try {
-            bos.writeTo(fos);
+            fos.write(text.getBytes(StandardCharsets.UTF_8));
         } finally {
             fos.close();
         }
         out.setReadable(true, false);
-        return out;
     }
 
     private static Result su(String script) {
-        String[][] cmds = new String[][] {
-                new String[] {"su", "-c", "sh"},
-                new String[] {"su"},
-                new String[] {"/system/bin/su", "-c", "sh"},
-                new String[] {"/debug_ramdisk/su", "-c", "sh"}
-        };
-        Result last = Result.fail("su not found");
-        for (int i = 0; i < cmds.length; i++) {
-            last = suOnce(cmds[i], script);
-            if (last.ok || last.output.contains("uid=0") || last.output.contains("DONE")) {
-                return last;
-            }
-        }
-        return last;
-    }
-
-    private static Result suOnce(String[] cmd, String script) {
         Process p = null;
         try {
-            p = Runtime.getRuntime().exec(cmd);
+            p = Runtime.getRuntime().exec(SU);
             StreamCollector stdout = new StreamCollector(p.getInputStream());
             StreamCollector stderr = new StreamCollector(p.getErrorStream());
             stdout.start();
@@ -175,12 +175,9 @@ public class MainActivity extends Activity {
             stdout.join();
             stderr.join();
             String merged = (stdout.text + "\n" + stderr.text).trim();
-            if (code == 0) {
-                return Result.ok(merged);
-            }
-            return Result.fail("cmd=" + cmd[0] + " exit=" + code + "\n" + merged);
+            return code == 0 ? Result.ok(merged) : Result.fail("exit=" + code + "\n" + merged);
         } catch (Exception e) {
-            return Result.fail("cmd=" + cmd[0] + " " + e.toString());
+            return Result.fail(e.toString());
         } finally {
             if (p != null) {
                 p.destroy();
@@ -188,12 +185,25 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void setStatus(String text, int color) {
+        rootStatus.setText(text);
+        rootStatus.setTextColor(color);
+    }
+
     private void appendLog(String text) {
-        if (text == null || text.trim().length() == 0) {
+        if (text == null) {
+            return;
+        }
+        String add = text.trim();
+        if (add.length() == 0) {
             return;
         }
         String old = logView.getText() == null ? "" : logView.getText().toString();
-        logView.setText((old + "\n\n" + text.trim()).trim());
+        String next = (old + "\n\n" + add).trim();
+        if (next.length() > LOG_MAX) {
+            next = next.substring(next.length() - LOG_MAX);
+        }
+        logView.setText(next);
     }
 
     private void setBusy(boolean busy) {
