@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
@@ -30,6 +31,7 @@ public class MainActivity extends Activity {
     private TextView logView;
     private Button btnApply;
     private Button btnRestore;
+    private CheckBox transientMode;
     private int colorOk;
     private int colorWarn;
     private int colorFail;
@@ -42,6 +44,7 @@ public class MainActivity extends Activity {
         logView = findViewById(R.id.logView);
         btnApply = findViewById(R.id.btnApply);
         btnRestore = findViewById(R.id.btnRestore);
+        transientMode = findViewById(R.id.transientMode);
         colorOk = getColor(R.color.ok);
         colorWarn = getColor(R.color.warn);
         colorFail = getColor(R.color.danger_text);
@@ -49,13 +52,14 @@ public class MainActivity extends Activity {
         btnApply.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
-                runScript("apply.sh", R.string.applying);
+                String args = transientMode.isChecked() ? " --transient" : "";
+                runScript("apply.sh", R.string.applying, args);
             }
         });
         btnRestore.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
-                runScript("restore.sh", R.string.restoring);
+                runScript("restore.sh", R.string.restoring, "");
             }
         });
         checkRoot();
@@ -84,7 +88,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void runScript(final String name, final int pendingId) {
+    private void runScript(final String name, final int pendingId, final String args) {
         setBusy(true);
         appendLog(getString(pendingId));
         io.execute(new Runnable() {
@@ -93,7 +97,8 @@ public class MainActivity extends Activity {
                 Result r;
                 try {
                     stageAssets();
-                    r = su("chmod 755 /data/local/tmp/mumu-adclean-*.sh && sh /data/local/tmp/mumu-adclean-" + name);
+                    r = su("chmod 755 /data/local/tmp/mumu-adclean-*.sh && sh /data/local/tmp/mumu-adclean-"
+                            + name + args);
                     if (r.output.contains("DONE")) {
                         r = Result.ok(r.output);
                     }
@@ -209,8 +214,10 @@ public class MainActivity extends Activity {
     private void setBusy(boolean busy) {
         btnApply.setEnabled(!busy);
         btnRestore.setEnabled(!busy);
+        transientMode.setEnabled(!busy);
         btnApply.setAlpha(busy ? 0.5f : 1f);
         btnRestore.setAlpha(busy ? 0.5f : 1f);
+        transientMode.setAlpha(busy ? 0.5f : 1f);
     }
 
     static class StreamCollector extends Thread {

@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">MuMu去广告</string>
     <string name="title">MuMu 桌面去广告</string>
-    <string name="subtitle">去掉顶部搜索栏、「每日新发现」和底栏小工具推广。需要 KernelSU 授权 Root。每台模拟器安装一次即可，重启后仍然有效。</string>
+    <string name="subtitle">推荐临时开启 Root 完成清理，之后可关闭 Root。广告组件和桌面项会保持清理状态；搜索栏依赖 Root，关闭 Root 并重启后可能恢复。</string>
+    <string name="transient_mode">临时 Root（推荐，清理后无需保持 Root）</string>
     <string name="btn_apply">去除广告</string>
     <string name="btn_restore">恢复广告</string>
     <string name="checking_root">正在检测 Root…</string>
@@ -12,7 +13,7 @@
     <string name="root_fail_log">Root 检测失败。</string>
     <string name="applying">正在去除广告…</string>
     <string name="restoring">正在恢复广告…</string>
-    <string name="apply_ok">完成。请看桌面，搜索栏和「每日新发现」应已消失</string>
+    <string name="apply_ok">清理完成。临时模式可关闭 Root；重启后若搜索栏恢复，可再次临时开启 Root 清理</string>
     <string name="apply_fail">执行失败，请查看下方日志</string>
     <string name="log_title">运行日志</string>
     <string name="log_waiting">等待操作</string>

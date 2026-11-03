@@ -126,3 +126,39 @@ if ($LASTEXITCODE -ne 0) { throw 'apk verify failed' }
 
 Write-Host ''
 Write-Host "APK: $OutApk"
+
+Write-Host ''
+Write-Host '== build Windows host GUI =='
+$Csc = if ([Environment]::Is64BitOperatingSystem) {
+    Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+} else {
+    Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
+}
+if (-not (Test-Path $Csc)) { throw "C# compiler not found: $Csc" }
+
+$HostBuild = Join-Path $Work 'host'
+$GuardExe = Join-Path $HostBuild 'MuMuAdCleanerGuard.exe'
+$HostExe = Join-Path $OutDir 'MuMuAdCleaner.exe'
+New-Item -ItemType Directory -Force -Path $HostBuild | Out-Null
+
+& $Csc /nologo /target:winexe /optimize+ /codepage:65001 `
+    "/out:$GuardExe" `
+    (Join-Path $Root 'windows\MuMuAdCleanerGuard.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Windows guard build failed' }
+
+& $Csc /nologo /target:winexe /optimize+ /codepage:65001 `
+    "/win32manifest:$(Join-Path $Root 'windows\app.manifest')" `
+    "/resource:$GuardExe,GuardPayload" `
+    /r:System.dll `
+    /r:System.Core.dll `
+    /r:System.Drawing.dll `
+    /r:System.Windows.Forms.dll `
+    /r:System.Management.dll `
+    /r:System.Web.Extensions.dll `
+    "/out:$HostExe" `
+    (Join-Path $Root 'windows\AssemblyInfo.cs') `
+    (Join-Path $Root 'windows\HostCleanerCore.cs') `
+    (Join-Path $Root 'windows\MuMuAdCleanerGui.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Windows host GUI build failed' }
+
+Write-Host "Windows EXE: $HostExe"

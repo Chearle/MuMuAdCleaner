@@ -52,6 +52,18 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <CheckBox
+            android:id="@+id/transientMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:buttonTint="@color/ok"
+            android:checked="true"
+            android:padding="6dp"
+            android:text="@string/transient_mode"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+
         <Button
             android:id="@+id/btnRestore"
             android:layout_width="match_parent"
